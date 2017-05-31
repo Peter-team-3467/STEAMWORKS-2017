@@ -3,7 +3,6 @@ package org.usfirst.frc3467.subsystems.Brownout;
 import java.util.Vector;
 
 import org.usfirst.frc3467.subsystems.Brownout.PowerConsumer;
-import org.usfirst.frc3467.subsystems.Brownout.commands.checkPower;
 
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
 import edu.wpi.first.wpilibj.command.Subsystem;
@@ -80,7 +79,7 @@ public class Brownout extends Subsystem {
 
 	// Initialize the Default Command
 	protected void initDefaultCommand() {
-		this.setDefaultCommand(new checkPower());
+//		this.setDefaultCommand(new checkPower());
 	}
 
 	public double getVoltage() {

@@ -4,13 +4,22 @@ package org.usfirst.frc3467.robot;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.command.Scheduler;
+import edu.wpi.first.wpilibj.command.Subsystem;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-//Import subsystem classes from subsystem packages
+import org.usfirst.frc3467.subsystems.FieldCamera.FieldCamera;
 import org.usfirst.frc3467.robot.CommandBase;
-import org.usfirst.frc3467.subsystems.Example.ExampleCommand;
+import org.usfirst.frc3467.robot.commands.Autonomous.AutoShootLeft;
+import org.usfirst.frc3467.robot.commands.Autonomous.AutoShootRight;
+import org.usfirst.frc3467.robot.commands.Autonomous.DoNothing;
+import org.usfirst.frc3467.robot.commands.Autonomous.JustDrive;
+import org.usfirst.frc3467.robot.commands.Autonomous.GearAutoForward;
+import org.usfirst.frc3467.robot.commands.Autonomous.GearAutoRight;
+import org.usfirst.frc3467.robot.commands.Autonomous.kPaAutoLeft;
+import org.usfirst.frc3467.robot.commands.Autonomous.kPaAutoRight;
+
 	
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -21,24 +30,34 @@ import org.usfirst.frc3467.subsystems.Example.ExampleCommand;
  */
 public class Robot extends IterativeRobot {
 
-    Command autonomousCommand;
+	Command autonomousCommand;
 	SendableChooser autoChooser;
 	
     /**
      * This function is run when the robot is first started up and should be
      * used for any initialization code.
      */
-    public void robotInit() {
+	public void robotInit() {
 
-        // Initialize all subsystems
-    	CommandBase.init();	
+		// Start the FieldCamera
+		new FieldCamera();
+        
+		// Initialize all subsystems
+		CommandBase.init();	
     	
-    	// Add autonomous selector
+		// Add autonomous selector
 		autoChooser = new SendableChooser();
-		autoChooser.addDefault("Default Auto", new ExampleCommand());
-		//autoChooser.addObject("Drive Straight", new AutoDriveStraight());
+		autoChooser.addDefault("GearAutoForward", new GearAutoForward());
+		autoChooser.addObject("Go Straight", new JustDrive());
+		autoChooser.addObject("Do Nothing", new DoNothing());
+		autoChooser.addObject("Shoot Left (BLUE)", new AutoShootLeft());
+		autoChooser.addObject("Shoot Right (RED)", new AutoShootRight());
+		autoChooser.addObject("Auto Gear Right", new GearAutoRight());
+		autoChooser.addObject("Hopper shoot Right (RED)", new kPaAutoRight());
+		autoChooser.addObject("Hopper shoot Left (BLUE)", new kPaAutoLeft());
 		
-		SmartDashboard.putData("Auto", autoChooser);
+			SmartDashboard.putData("Autonomous Command Chooser", autoChooser);
+
     }
 	
     /**
@@ -46,18 +65,26 @@ public class Robot extends IterativeRobot {
      * You can use it to reset subsystems before shutting down.
      */
     public void disabledInit(){
-
+    	SmartDashboard.putString("Robot", "Robot Disabled");
     }
 
 	public void disabledPeriodic() {
+		
+		// Scheduler can continue to run while robot is disabled
 		Scheduler.getInstance().run();
+		
+		autonomousCommand = (Command)autoChooser.getSelected();
+		if (autonomousCommand != null)
+			SmartDashboard.putString("Selected Autonomous Cmd", autonomousCommand.toString());
 	}
 
     public void autonomousInit() {
 
     	// schedule the autonomous command
-		autonomousCommand = (Command) autoChooser.getSelected();
+ 		//autonomousCommand = autoChooser.getSelected();
         if (autonomousCommand != null) autonomousCommand.start();
+    
+    	SmartDashboard.putString("Robot", "Autonomous Started");
     }
 
     /**
@@ -85,6 +112,15 @@ public class Robot extends IterativeRobot {
      */
     public void teleopPeriodic() {
         Scheduler.getInstance().run();
+        
+        // Show running command(s) on SmartDash
+        SmartDashboard.putData(Scheduler.getInstance());
+        
+        // Show status of running commands for each subsystem
+        for (Subsystem s : CommandBase.subsystemList) {
+        	SmartDashboard.putData(s);
+        }
+
         SmartDashboard.putString("Robot", "Teleop Periodic");
     }
     

@@ -8,6 +8,7 @@ import org.usfirst.frc3467.subsystems.Brownout.Brownout;
 import org.usfirst.frc3467.subsystems.Brownout.PowerConsumer;
 
 import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -16,6 +17,12 @@ public class Pneumatics extends Subsystem implements PowerConsumer {
 	private Compressor scorpionCompressor;
 	private AnalogInput pressureSensor;
 	private boolean compressorActive = true;
+	private static boolean  intakePistonState = true;
+	
+	// Solenoids
+	public DoubleSolenoid tractionFeet;
+	public DoubleSolenoid gearIntake;
+	public DoubleSolenoid intakeRamp;
 	
 	// Pneumatics is a singleton
 	private static Pneumatics instance = new Pneumatics();
@@ -31,15 +38,72 @@ public class Pneumatics extends Subsystem implements PowerConsumer {
 	 * the instance static member variable.
 	 */
 	protected Pneumatics() {
-		instance = this;
-		
+				
 		scorpionCompressor = new Compressor();
 		pressureSensor = new AnalogInput(RobotMap.pneumatics_sensor_port);
+
+		initSolenoids();
+		
 		scorpionCompressor.start();
 		compressorActive = true;
 		
 		Brownout.getInstance().registerCallback(this);
 	}
+	
+	private void initSolenoids() {
+		gearIntake = new DoubleSolenoid(RobotMap.gearintake_solenoid_retract,
+										 RobotMap.gearintake_solenoid_extend);
+
+		tractionFeet = new DoubleSolenoid(RobotMap.traction_solenoid_deploy,
+										 RobotMap.traction_solenoid_retract);
+
+		intakeRamp = new DoubleSolenoid(RobotMap.intakeRamp_solenoid_retract,
+			  							RobotMap.intakeRamp_solenoid_extend);
+
+		gearIntake.set(DoubleSolenoid.Value.kForward);
+		tractionFeet.set(DoubleSolenoid.Value.kReverse);
+		intakeRamp.set(DoubleSolenoid.Value.kReverse);
+	}
+	
+	/*
+	 * Custom Pneumatics Helper methods
+	 */
+		
+	public void tractionFeetDeploy() {
+		tractionFeet.set(DoubleSolenoid.Value.kForward);
+	}
+	public void tractionFeetRetract() {
+		tractionFeet.set(DoubleSolenoid.Value.kReverse);
+	}
+	
+	public void gearIntakeUp() {
+		gearIntake.set(DoubleSolenoid.Value.kForward);
+	}
+	public void gearIntakeDown() {
+		gearIntake.set(DoubleSolenoid.Value.kReverse);
+	}
+	
+	public void intakeRampRelease() {
+		intakeRamp.set(DoubleSolenoid.Value.kForward);
+	}
+	public void intakeRampHold() {
+		intakeRamp.set(DoubleSolenoid.Value.kReverse);
+	}
+	
+	public void toggleIntakeRamp() {
+		if (intakePistonState) {
+			intakeRamp.set(DoubleSolenoid.Value.kForward);
+			intakePistonState = false;
+		}
+		else {
+			intakeRamp.set(DoubleSolenoid.Value.kReverse);
+			intakePistonState = true;
+		}
+	}
+	
+	/*
+	 * Standard Pneumatics methods	
+	 */
 	
 	public double getPressure() {
 		return pressureSensor.getVoltage();

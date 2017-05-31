@@ -6,7 +6,6 @@ import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.PIDSource;
 import edu.wpi.first.wpilibj.PIDSourceType;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Drive the given distance straight (negative values go backwards).
@@ -16,19 +15,20 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class DriveStraight extends CommandBase {
 
-	private static final double TOLERANCE = 50;
+	private static final double TOLERANCE = 2000;
 	
 	private PIDController m_pid;
-	private double m_maxSpeed = 0.6;
+	private double m_maxSpeed = 0.3;
 	private double m_distance = 0.0;
-	private boolean m_manualCurve = false;
+	private boolean m_manualCurve = true;
 	private double m_curveValue = 0.0;
+	private double m_initialHeading = 0.0;
 	private double m_pastDistance = 0.0;
 	private int m_count = 0;
 	
-	private double KP = 2.0;
+	private double KP = 1.0;
 	private double KI = 0.0;
-	private double KD = 1.0;
+	private double KD = 2.0;
 	
     public DriveStraight(double distance, double maxSpeed, double kp, double ki, double kd) {
         
@@ -45,7 +45,6 @@ public class DriveStraight extends CommandBase {
     	m_maxSpeed = maxSpeed;
     	m_distance = distance;
     	buildController();
-    	;
     }
 	
 	public DriveStraight(double distance) {
@@ -93,11 +92,7 @@ public class DriveStraight extends CommandBase {
                 new PIDOutput() {
                 	
                 	public void pidWrite(double d) {
-                		// Drive with the magnitude returned by the PID calculation, 
-                		// and curve the opposite way from the current yaw reading
-                		// (Divide yaw by 180 so as to normalize to -1.0 / + 1.0)
-                		//driveBase.drive(-d, -(ahrs.getGyroYaw()/240.));
-                		setCurve(-d);
+                		driveStraight(d);
                 }});
 		
         m_pid.setAbsoluteTolerance(TOLERANCE);
@@ -115,23 +110,30 @@ public class DriveStraight extends CommandBase {
 		}
 	}
 	
-	public void setCurve(double d) {
+	// Drive straight with the magnitude returned by the PID calculation, 
+	public void driveStraight(double d) {
 		if (m_manualCurve) {
+			// Curve using the preset value
 			driveBase.drive(d, m_curveValue);
+		} else {
+			// Get the current heading reading differential and curve to oppose the change 
+			// (Divide degree differential by a factor so as to normalize to numbers less than -1.0 / + 1.0)
+			driveBase.drive(d, ((m_initialHeading - gyro.getHeading())/240.));
 		}
-			else  {
-				driveBase.drive(d, -(gyro.getGyroYaw()/240.));
-				}
-		}
+	}
 	
 	
     // Called just before this Command runs the first time
     protected void initialize() {
     	// Get everything in a safe starting state.
-        driveBase.resetEncoders();
-        gyro.gyroReset();
+        driveBase.liftFeetBeforeDriving();
+    	driveBase.resetEncoders();
+        //gyro.zeroGyro(); // Zeroing should be done separately before this command is run
+    	// Save the initial gyro heading - we want to keep that heading throughout the command
+    	m_initialHeading = gyro.getHeading();
     	m_pid.reset();
         m_pid.enable();
+        m_count = 0;
     }
 
     // Called repeatedly when this Command is scheduled to run
@@ -149,11 +151,11 @@ public class DriveStraight extends CommandBase {
     protected boolean isFinished() {
     	double error = m_pid.getError();
     	
-    	if (m_count >= 50) {
+    	if (m_count >= 100) {
     		return true;
     	}
     	else {
-    		return (error >= 0 && error <= TOLERANCE);
+       		return ((error >= 0 && error <= TOLERANCE) || (error < 0 && error >= (-1.0)*TOLERANCE));
     	}
     }
 

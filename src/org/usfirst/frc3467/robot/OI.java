@@ -1,19 +1,44 @@
 package org.usfirst.frc3467.robot;
 
-/*
-import org.usfirst.frc3467.robot.triggers.DPadDown;
-import org.usfirst.frc3467.robot.triggers.DPadUp;
-import org.usfirst.frc3467.robot.triggers.GamepadLeftTrigger;
-import org.usfirst.frc3467.robot.triggers.GamepadRightTrigger;
-import org.usfirst.frc3467.subsystems.Example.ExampleCommand;
-*/
+import org.usfirst.frc3467.robot.control.Gamepad;
+import org.usfirst.frc3467.robot.control.triggers.DPadDown;
+import org.usfirst.frc3467.robot.control.triggers.DPadLeft;
+import org.usfirst.frc3467.robot.control.triggers.DPadRight;
+import org.usfirst.frc3467.robot.control.triggers.DPadUp;
+import org.usfirst.frc3467.robot.control.triggers.GamepadLeftTrigger;
+import org.usfirst.frc3467.robot.control.triggers.GamepadRightTrigger;
+import org.usfirst.frc3467.subsystems.Climber.ClimberDrive;
+import org.usfirst.frc3467.subsystems.Climber.ToggleLatchPosition;
+import org.usfirst.frc3467.subsystems.DriveBase.AutoGear;
+import org.usfirst.frc3467.subsystems.DriveBase.DriveBase;
+import org.usfirst.frc3467.subsystems.DriveBase.DriveBot;
+import org.usfirst.frc3467.subsystems.DriveBase.DriveTurn;
+import org.usfirst.frc3467.subsystems.DriveBase.DropTractionPlates;
+import org.usfirst.frc3467.subsystems.DriveBase.LiftTractionPlates;
+import org.usfirst.frc3467.subsystems.DriveBase.ResetEncoders;
+import org.usfirst.frc3467.subsystems.DriveBase.UpdatePIDFConstants;
+import org.usfirst.frc3467.subsystems.GearCatcher.GearIntake;
+import org.usfirst.frc3467.subsystems.GearCatcher.GearDeliver;
+import org.usfirst.frc3467.subsystems.GearCatcher.IntakeWithoutTransistor;
+import org.usfirst.frc3467.subsystems.GearCatcher.TestGearIntake;
+import org.usfirst.frc3467.subsystems.GearCatcher.ToggleGearCatcherPosition;
+import org.usfirst.frc3467.subsystems.Gyro.ZeroGyro;
+import org.usfirst.frc3467.subsystems.Pneumatics.ToggleIntakeRamp;
+import org.usfirst.frc3467.subsystems.Pneumatics.testCommands.tractionDeploy;
+import org.usfirst.frc3467.subsystems.Pneumatics.testCommands.tractionRetract;
+import org.usfirst.frc3467.subsystems.Shooter.AutoAim;
+import org.usfirst.frc3467.subsystems.Shooter.CalibrateTurret;
+import org.usfirst.frc3467.subsystems.Shooter.HaltShooter;
+import org.usfirst.frc3467.subsystems.Shooter.OperateShooter;
+import org.usfirst.frc3467.subsystems.Shooter.PositionTurret;
+import org.usfirst.frc3467.subsystems.Shooter.RunFeed;
+import org.usfirst.frc3467.subsystems.Shooter.RunTurret;
+import org.usfirst.frc3467.subsystems.Shooter.TestShooter;
+import org.usfirst.frc3467.subsystems.Shooter.TestFeed;
 
-import edu.wpi.first.wpilibj.Joystick;
-/*
-import edu.wpi.first.wpilibj.buttons.Button;
 import edu.wpi.first.wpilibj.buttons.JoystickButton;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-*/
+
 
 /**
  * This class is the glue that binds the controls on the physical operator
@@ -21,167 +46,105 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class OI {
 	
-	public static Joystick PrimaryStick;
-//	public static Gamepad operator;
-	
-/*
- * Joystick Mappings (done elsewhere in code)
- * 
- * Joystick PrimaryStick - used for Robot-centric. Field-centric, or Arcade Drive
- * 
- * Gamepad getRightStickX() - used for manual drive of Intake rollers
- * Gamepad getLeftStickY() - used for manual drive of Catapult reset bar
- * 
- */
-	
+	public static Gamepad driverPad;
+	public static Gamepad operatorPad;
+
+	// Normal: Left Stick: X/Y Translation; Right Stick X: Rotation
+	// Reverse: Right Stick: X/Y Translation; Left Stick X: Rotation
+	public static boolean reverseDriveSticks = false; 
 	
 	public OI(){
-		PrimaryStick = new Joystick(0);
-//		operator = new Gamepad(1);
+		driverPad = new Gamepad(0);
+		operatorPad = new Gamepad(1);
 	}
 	
-	
-	//Joystick Methods that return values for specific joystick axes
-	public double getPrimeY(){
-		return PrimaryStick.getY();
+	// Methods that return values for specific driving parameters
+	public double getDriveX(){
+		if (reverseDriveSticks)
+			return driverPad.getRightStickX();
+		else
+			return driverPad.getLeftStickX();
 	}
 	
-	public double getPrimeX(){
-		return PrimaryStick.getX();
+	public double getDriveY(){
+		if (reverseDriveSticks)
+			return driverPad.getRightStickY();
+		else
+			return driverPad.getLeftStickY();
 	}
 	
-	public double getPrimeTwist() {
-		return PrimaryStick.getTwist();
+	public double getDriveRotation() {
+		if (reverseDriveSticks)
+			return driverPad.getLeftStickX();
+		else
+			return driverPad.getRightStickX();
 	}
-	
 	
 	//Method that binds certain commands to certain buttons
 	public void BindCommands() {
-
-
-	    //// CREATING BUTTONS
-	    // One type of button is a joystick button which is any button on a joystick.
-	    // You create one by telling it which joystick it's on and which button
-	    // number it is.
-	    // Joystick stick = new Joystick(port);
-	    // Button button = new JoystickButton(stick, buttonNumber);
-	    
-	    // There are a few additional built in buttons you can use. Additionally,
-	    // by subclassing Button you can create custom triggers and bind those to
-	    // commands the same as any other Button.
-	    
-	    //// TRIGGERING COMMANDS WITH BUTTONS
-	    // Once you have a button, it's trivial to bind it to a button in one of
-	    // three ways:
-	    
-	    // Start the command when the button is pressed and let it run the command
-	    // until it is finished as determined by it's isFinished method.
-	    // button.whenPressed(new ExampleCommand());
-	    
-	    // Run the command while the button is being held down and interrupt it once
-	    // the button is released.
-	    // button.whileHeld(new ExampleCommand());
-	    
-	    // Start the command when the button is released  and let it run the command
-	    // until it is finished as determined by it's isFinished method.
-	    // button.whenReleased(new ExampleCommand());
-		
-		
-		
-		
-/*
- 	//DriveBase
-
-		//Toggle in and out of precision angle mode
-		new JoystickButton(PrimaryStick, 3)
-			.whenPressed(new PreciseRotateToAngle());
-		
-		new JoystickButton(PrimaryStick, 4)
-			.whenPressed(new RobotCentricDrive());
-		
-		//Toggle in and out of AimBot
-		new JoystickButton(PrimaryStick, 1)
-			.whileHeld(new AimBot());
-		
-		new JoystickButton(PrimaryStick, 2)
-			.whenPressed(new RobotCentricDrive());
-*/
-		
-/*
-  	//Utility Bar
- 
-		//Utility bar up
-		new GamepadLeftTrigger(operator)
-		.whenActive(new Bar_actuate(UtilityBar.kOut));
-		
-		//Utility bar down
-		new GamepadRightTrigger(operator)
-			.whenActive(new Bar_actuate(UtilityBar.kIn));
-*/	
-		
-/*
- 	//Intake
- 
-		//Eject Fast
-		new JoystickButton(operator, Gamepad.xButton)
-			.whileHeld(new IntakeDrive(Intake.kEjectFast));
-		
-		//Intake Fast
-		new JoystickButton(operator, Gamepad.bButton)
-			.whileHeld(new IntakeDrive(Intake.kIntakeFast));
-		
-		//Intake up
-		new JoystickButton(operator, Gamepad.aButton)
-			.whenActive(new Roller_Actuate(true));
-		
-		//Intake down
-		new JoystickButton(operator, Gamepad.yButton)
-			.whenActive(new Roller_Actuate(false));
 		
 		/*
-		//Intake Extend
-		new JoystickButton(SecondaryStick, 1)
-		.whenPressed(new Roller_Actuate(true));
+		 *
+		 * Driver GamePad
+		 * 
+		 */
 		
-		new JoystickButton(SecondaryStick, 2)
-		.whenPressed(new Roller_Actuate(false));	
-*/
+		new JoystickButton(driverPad, Gamepad.leftBumper).whenActive(new ToggleGearCatcherPosition());
+		new GamepadRightTrigger(driverPad).whenActive(new GearIntake());
+		new JoystickButton(driverPad, Gamepad.rightBumper).whenActive(new GearDeliver());
+		new JoystickButton(driverPad, Gamepad.startButton).whenActive(new ZeroGyro());
+		new JoystickButton(driverPad, Gamepad.yButton).whenActive(new ClimberDrive());
+		new JoystickButton(driverPad, Gamepad.bButton).whenActive(new DriveBot(DriveBase.driveMode_FieldCentric));
+		new JoystickButton(driverPad, Gamepad.aButton).whenActive(new DriveBot(DriveBase.driveMode_Precision));
+		new GamepadLeftTrigger(driverPad).whileActive(new IntakeWithoutTransistor());
+		//new JoystickButton(driverPad, Gamepad.leftStickPress).whenActive(new CenterRobot());
+
+		new JoystickButton(driverPad, Gamepad.xButton).whenActive(new DriveBot(DriveBase.driveMode_RobotCentric));
+		//new DPadLeft(driverPad).whenActive(new AutoAim()));
+		new DPadRight(driverPad).whenActive(new DriveBot(DriveBase.driveMode_Arcade));
+		//new DPadUp(driverPad).whenActive(new DriveBot(DriveBase.driveMode_FieldCentric));
+		
+		
+		/*
+		 * 
+		 * Operator GamePad
+		 * 
+		 */
+
+		//new GamepadLeftTrigger(operatorPad).whileActive(new AutoAim());
+		new GamepadLeftTrigger(operatorPad).whenActive(new OperateShooter(true));
+		new JoystickButton(operatorPad, Gamepad.leftBumper).whenActive(new TestGearIntake(true));
+		new JoystickButton(operatorPad, Gamepad.rightBumper).whenActive(new TestGearIntake(false));
+
+		new JoystickButton(operatorPad, Gamepad.xButton).whileActive(new RunFeed(1.0));
+		new JoystickButton(operatorPad, Gamepad.bButton).whileActive(new RunFeed(-1.0));
+		//new JoystickButton(operatorPad, Gamepad.yButton).whileActive(new RunBelt(Shooter.BELT_SPEED_DEFAULT));
+		//new JoystickButton(operatorPad, Gamepad.aButton).whileActive(new RunBelt(-1 * Shooter.BELT_SPEED_DEFAULT));
+		new JoystickButton(operatorPad, Gamepad.aButton).whenActive(new AutoAim());
+		new JoystickButton(operatorPad, Gamepad.yButton).whileActive(new RunTurret());
+
+		new DPadUp(operatorPad).whenActive(new LiftTractionPlates());
+		new DPadDown(operatorPad).whenActive(new DropTractionPlates());
+		new DPadLeft(operatorPad).whenActive(new HaltShooter());
+		new DPadRight(operatorPad).whenActive(new ToggleIntakeRamp());
+		
 
 		
-/*
- 		// Gamepad DPad actions
- 
-		new DPadUp(operator)
-			.whenActive(new SetBrakeMode(false));
+		//
+		// Pneumatic Test Buttons
+		//
+		SmartDashboard.putData("tractionFeetRetract", new tractionRetract());
+		SmartDashboard.putData("tractionFeetDeploy", new tractionDeploy());
 
-		// DPad Down
-		new DPadDown(operator)
-			.whenActive(new SetBrakeMode(true));
- 		
-		 DPad Right
-		new DPadRight(operator)
-			.whenActive(new ShooterLatch());
-
-		DPad Left
-		new DPadLeft(operator)
-			.whenActive(new ShooterClear());
- */
+		SmartDashboard.putData("Test Shooter Feed", new TestFeed());
+		SmartDashboard.putData("Test Shooter Wheels", new TestShooter());
+		SmartDashboard.putData("Zero Encoders", new ResetEncoders());
+		//SmartDashboard.putData("Update PIDF Constants", new UpdatePIDFConstants());
+		SmartDashboard.putData("Calibrate Turret", new CalibrateTurret());
+		SmartDashboard.putData("Position Turret", new PositionTurret());
+		SmartDashboard.putData("Drive Turn", new DriveTurn(45.0, 0.15));
+		SmartDashboard.putData("Zero Gyro", new ZeroGyro());
 		
 		
-/*
- 		// SmartDashboard Buttons
-
-		SmartDashboard.putData("Drivebase: Reset Encoders", new ResetDriveEncoders());
-		SmartDashboard.putData("Shooter: Calibrate", new ShooterOneWayCalibrate());
-		SmartDashboard.putData("AHRS: Reset Gyro", new ResetGyro());
-		SmartDashboard.putData("Vision: Target Goal", new TargetGoal());
-		SmartDashboard.putData("Vision: AimBot", new AimBot());
-		SmartDashboard.putData("Shooter MP", new ShootMP());
-		
-		//Test Buttons
-		SmartDashboard.putData("Test AutoTarget", new AutoTarget());
-		SmartDashboard.putData("Test Motion Profiling", new DriveMotionProfiling(90, 0.1, 0.1, 3, true));
-*/
 	}
-
 }
